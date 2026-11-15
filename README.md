@@ -17,7 +17,7 @@
 - Corner sampling and circuit simulation data
 - Circuit results summary
 
-**Jayash**
+**Jayakanth**
 - Model training script
 - XGBoost model
 - PMOS_ON data, trained model, and netlist
