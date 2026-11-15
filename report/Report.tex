@@ -75,6 +75,214 @@ Kavya Veer (2024112002)
 \end{titlepage}
 
 % ==================================================================
+\section{Theory: leakage currents in a MOSFET}
+% ==================================================================
+
+In an ideal CMOS gate no current flows once the inputs are stable: every path from VDD to ground
+contains at least one transistor that is OFF, and the gate oxide is a perfect insulator. A real
+transistor leaks through several mechanisms, and in deep-submicron technologies such as 32\,nm the
+resulting static power is a large part of the total power. Leakage depends exponentially on
+temperature, threshold voltage, oxide thickness and supply voltage, so it varies strongly with
+process, voltage and temperature (PVT). This section describes the current mechanisms of a single
+transistor, the operating regions in which they occur, and how they add up in a logic gate.
+
+\subsection*{Operating regions}
+
+With $V_{gs}$ the gate-source voltage, $V_{ds}$ the drain-source voltage and $V_{th}$ the
+threshold voltage (shown here for an NMOS; the PMOS is the same with the signs reversed):
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}p{3.2cm}p{3.6cm}L@{}}
+\toprule
+Region & Condition & Channel current \\
+\midrule
+Subthreshold (weak inversion) & $V_{gs} < V_{th}$ & $I_{sub} = I_0 \dfrac{W}{L}\, e^{(V_{gs}-V_{th})/nV_T}\left(1 - e^{-V_{ds}/V_T}\right)$ \\[8pt]
+Linear (triode) & $V_{gs} > V_{th}$, $V_{ds} < V_{gs} - V_{th}$ & $I_{d} = \mu C_{ox} \dfrac{W}{L}\left[(V_{gs}-V_{th})V_{ds} - \tfrac{1}{2}V_{ds}^2\right]$ \\[8pt]
+Saturation & $V_{gs} > V_{th}$, $V_{ds} \ge V_{gs} - V_{th}$ & $I_{d} = \tfrac{1}{2}\mu C_{ox} \dfrac{W}{L}(V_{gs}-V_{th})^2(1+\lambda V_{ds})$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Here $V_T = kT/q$ is the thermal voltage (25.9\,mV at 27\,\textdegree C), $n \approx 1.2$--1.6 is
+the subthreshold slope factor, $\mu$ the carrier mobility, $C_{ox} = \varepsilon_{ox}/t_{ox}$ the
+oxide capacitance per unit area and $\lambda$ the channel-length modulation coefficient.
+
+Inside a static CMOS gate whose inputs are at exactly 0 or VDD, every transistor is in one of two
+states:
+\begin{itemize}
+\item \textbf{OFF transistors are in the subthreshold region} ($V_{gs} = 0$). They carry the
+classic leakage current from drain to source. The full supply voltage, or most of it, appears
+across them, so $V_{ds}$ is large and the term $(1 - e^{-V_{ds}/V_T})$ is close to 1.
+\item \textbf{ON transistors are in the deep linear (triode) region} ($|V_{gs}| = $ VDD,
+$V_{ds} \approx 0$). The node they connect is already at the rail, so only the tiny current that
+feeds the leakage of the OFF transistors flows through them, and $V_{ds}$ is in the nanovolt to
+microvolt range. Their channel carries leakage from other devices, but an ON transistor also leaks
+on its own, mostly through its gate oxide (see below).
+\end{itemize}
+
+\subsection*{Leakage mechanisms}
+
+\textbf{1. Subthreshold leakage ($I_{sub}$).} When $V_{gs} < V_{th}$ the channel is not inverted,
+but carriers still diffuse from source to drain over the potential barrier. The current falls by a
+decade for every $nV_T \ln 10 \approx 70$--100\,mV of reduction in $V_{gs} - V_{th}$, so it is very
+sensitive to $V_{th}$. It rises steeply with temperature because $V_T$ grows and $V_{th}$ falls
+(by about 1\,mV/K). Several effects change $V_{th}$ and so $I_{sub}$:
+\begin{itemize}
+\item \emph{Drain-induced barrier lowering (DIBL):} a high drain voltage lowers the source barrier,
+$V_{th} = V_{th0} - \eta V_{ds}$.
+\item \emph{Body effect:} a reverse source-body voltage raises $V_{th}$,
+$V_{th} = V_{th0} + \gamma\left(\sqrt{2\phi_F + V_{sb}} - \sqrt{2\phi_F}\right)$. This is the origin
+of the \emph{stack effect}: in two series OFF transistors the middle node rises a little above
+ground, giving the upper device a negative $V_{gs}$, a lower $V_{ds}$ and a higher $V_{th}$, so a
+stack leaks several times less than a single transistor.
+\item \emph{Process:} a thinner oxide (\texttt{toxe}), lower doping (\texttt{ndep}) or lower
+\texttt{vth0} raise $I_{sub}$; a higher mobility (\texttt{u0}) raises the current at a given
+$V_{th}$; the junction depth (\texttt{xj}) changes the short-channel effects.
+\end{itemize}
+
+\textbf{2. Gate oxide tunnelling ($I_g$).} With oxides only about 1--2\,nm thick, electrons tunnel
+directly through the oxide. The current density depends exponentially on the oxide thickness and on
+the voltage across the oxide, approximately
+\[
+J_g \propto \left(\frac{V_{ox}}{t_{ox}}\right)^2 \exp\!\left(-\frac{B\,\big(1 - (1 - V_{ox}/\phi_{ox})^{3/2}\big)}{V_{ox}/t_{ox}}\right),
+\]
+where $\phi_{ox}$ is the barrier height and $B$ a material constant. BSIM4 splits the gate current
+into parts: gate-to-channel $I_{gc}$ (shared between source and drain as $I_{gcs}$ and $I_{gcd}$),
+gate-to-source and gate-to-drain overlap currents $I_{gs}$ and $I_{gd}$, and gate-to-body $I_{gb}$.
+Tunnelling is largest in an \textbf{ON transistor in the linear region}, where the full VDD lies
+across the oxide over the whole inverted channel. In the 32\,nm LP technology used here it is the
+largest leakage component in most gates: for an inverter at VDD 1.1\,V and 30\,\textdegree C the ON
+PMOS tunnelling current is $3.7 \times 10^{-11}$\,A, seven times the OFF NMOS subthreshold current.
+In an OFF transistor the oxide sees only the small overlap voltage, and the gate current is about
+$10^{-22}$\,A. Tunnelling depends only weakly on temperature.
+
+\textbf{3. Reverse-biased junction leakage ($I_{junc}$).} The source and drain junctions with the
+body are reverse-biased diodes. They leak by minority-carrier diffusion and by thermal generation
+in the depletion region, $I_{junc} = I_s\left(e^{V_{bd}/nV_T} - 1\right) \approx -I_s$, with a
+saturation current $I_s$ that rises strongly with temperature. At high doping, band-to-band
+tunnelling across the junction adds to it.
+
+\textbf{4. Gate-induced drain and source leakage (GIDL, GISL).} When the gate is at 0 and the drain
+at VDD (an OFF NMOS), the high field in the gate-drain overlap bends the bands enough for electrons
+to tunnel from the valence to the conduction band. The holes flow to the body, so GIDL is a
+drain-to-body current that rises exponentially with $V_{dg}$. GISL is the same effect at the
+source.
+
+\textbf{5. Impact ionisation ($I_{ii}$).} Carriers accelerated by a high drain field create
+electron-hole pairs, and the extra holes flow into the body. This needs both a channel current and
+a large $V_{ds}$, so it matters in saturation and is negligible for the static leakage of a gate.
+
+\textbf{6. Punch-through.} In very short channels the source and drain depletion regions can merge
+and current flows below the surface. BSIM4 includes this short-channel behaviour through DIBL and
+the doping profile.
+
+\subsection*{Terminal currents and gate leakage}
+
+The mechanisms above flow between different pairs of terminals, so each terminal current is a sum
+(signs schematic):
+\begin{align*}
+I_d &= I_{ch} + I_{gcd} + I_{gd} - I_{GIDL} - I_{junc,d} - I_{ii}, &
+I_g &= -(I_{gcs} + I_{gcd} + I_{gs} + I_{gd} + I_{gb}),\\
+I_s &= -I_{ch} + I_{gcs} + I_{gs} - I_{GISL} - I_{junc,s}, &
+I_b &= I_{gb} + I_{GIDL} + I_{GISL} + I_{junc,d} + I_{junc,s} + I_{ii},
+\end{align*}
+and by Kirchhoff's current law $I_d + I_g + I_s + I_b = 0$. For a gate, the leakage is the total
+current drawn from the sources at VDD (the supply and any input that is high), which equals the
+static power divided by VDD. The main contributors are the subthreshold current of the OFF stack,
+the junction and GIDL currents of the transistors with VDD across a junction, and the tunnelling
+current of every ON transistor. Because all of these depend on which transistors are ON, the
+leakage of a gate is different for every input combination.
+
+% ==================================================================
+\section{Theory: machine-learning models}
+% ==================================================================
+
+\subsection*{Why machine learning}
+
+A SPICE simulation solves the full BSIM4 equations, which have hundreds of parameters, for every
+transistor at every corner and input vector. This is accurate but slow for statistical PVT analysis
+of large circuits. A machine-learning (ML) model learns the mapping from the inputs (voltages,
+temperature, width and process parameters) to the terminal currents from a set of SPICE
+simulations, and then predicts new points in microseconds. Because logic gates and circuits are
+built from transistors, models of four transistor cases (NMOS and PMOS, ON and OFF) are enough to
+predict the leakage of any static CMOS gate, and of any circuit made of such gates.
+
+\subsection*{Supervised regression}
+
+The task is supervised regression: given $N$ examples $(\mathbf{x}_i, y_i)$, find a function
+$f(\mathbf{x})$ that minimises a loss, usually the mean squared error
+$\frac{1}{N}\sum_i (y_i - f(\mathbf{x}_i))^2$, while still working on points it has not seen. The
+data is therefore split into three parts: a \emph{training set} to fit the model, a
+\emph{validation set} to choose between models and hyperparameters, and a \emph{test set} used
+once at the end to report the accuracy on unseen data. A model that fits the training set much
+better than the validation set is \emph{overfitting}.
+
+Leakage currents span many decades ($10^{-22}$ to $10^{-5}$\,A), so a model fitted to the raw
+current would learn only the largest values. Fitting $\log |I|$ makes the error relative instead
+of absolute, which is what matters for leakage. Standardising the inputs (zero mean, unit
+variance) and giving the model physically meaningful features, such as $V_{gs}$, $V_{ds}$, $1/T$
+and $V_{th}$-related terms, makes the mapping smoother and easier to learn. A further step, used in
+this project, is to fit a physics equation first and let the ML model learn only the remaining
+correction.
+
+\subsection*{The four model types}
+
+\textbf{Polynomial ridge regression.} The inputs are expanded into all products up to a given
+degree (here 3), and a linear model is fitted to the expanded features $\phi(\mathbf{x})$ with an
+$L_2$ penalty:
+\[
+\min_{\mathbf{w}} \sum_i \big(y_i - \mathbf{w}^\top \phi(\mathbf{x}_i)\big)^2 + \alpha \|\mathbf{w}\|^2 .
+\]
+The penalty $\alpha$ keeps the many coefficients small and stops overfitting. The model is fast,
+smooth and has a closed-form solution, but it can only represent functions close to a polynomial.
+
+\textbf{Random forest.} A decision tree splits the input space into boxes by thresholds on one
+input at a time, and predicts the mean of the training targets in each box. A random forest
+averages many deep trees, each trained on a bootstrap sample of the data and choosing each split
+from a random subset of the inputs (\texttt{max\_features}). Averaging reduces the variance of the
+single trees. Random forests need little tuning and fit any shape of function, but their output is
+piecewise constant, so they are less precise for smooth physical functions and cannot extrapolate
+beyond the training range.
+
+\textbf{XGBoost (gradient-boosted trees).} Boosting builds an ensemble of small trees one after
+another, each fitted to the remaining errors (the gradient of the loss) of the ensemble so far:
+\[
+F_m(\mathbf{x}) = F_{m-1}(\mathbf{x}) + \eta\, h_m(\mathbf{x}),
+\]
+with a learning rate $\eta$ that keeps each step small. XGBoost adds second-order gradient
+information, regularisation of the tree leaves, and row and column subsampling. The main
+hyperparameters are the learning rate, the tree depth, the subsampling fractions and the number of
+trees, which is set by \emph{early stopping} on a held-out part of the training set. Boosted trees
+are usually the strongest model for tabular data, but like any tree model they are piecewise
+constant.
+
+\textbf{Multilayer perceptron (MLP).} An MLP is a feed-forward neural network in which each layer
+computes
+\[
+\mathbf{h}^{(l)} = \sigma\!\big(W^{(l)} \mathbf{h}^{(l-1)} + \mathbf{b}^{(l)}\big),
+\]
+with a non-linear activation $\sigma$ (here $\tanh$), and the last layer is linear. With enough
+neurons it can approximate any smooth function. The weights are trained by back-propagation, which
+computes the gradient of the loss with respect to every weight, and an optimiser such as Adam,
+which adapts the step size of each weight. The main hyperparameters are the number and size of the
+hidden layers, the activation, the learning rate, the batch size, the $L_2$ penalty and early
+stopping. MLPs give smooth outputs and work well when the target is a smooth function of the
+inputs, as transistor currents are, but they need standardised inputs and more careful training
+than tree models.
+
+\subsection*{Accuracy metrics}
+
+For each prediction the relative error is $|I_\text{ML} - I_\text{SPICE}| / |I_\text{SPICE}|$
+(with a small floor for currents near zero). The report gives the median error, the
+95th-percentile error (the error that 95\pct\ of the points stay below), the mean error, and the
+mean accuracy, $100\pct$ minus the mean error. The bias, the median of the signed relative error,
+shows whether a model over- or under-predicts systematically. The coefficient of determination
+$R^2 = 1 - \sum (y - \hat{y})^2 / \sum (y - \bar{y})^2$ is the share of the variance that a model
+explains.
+
+% ==================================================================
 \section{Setup}
 % ==================================================================
 
@@ -618,5 +826,45 @@ python scripts/05_circuit_validation.py         # Part C (~60 min)
 
 All random draws use fixed seeds set in \texttt{scripts/config.py}. A full rerun reproduces the
 datasets bit for bit and the results above.
+
+% ==================================================================
+\section{Contributions}
+% ==================================================================
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}p{2.6cm}L@{}}
+\toprule
+Member & Contribution \\
+\midrule
+Kavya &
+Transistor data generation script; polynomial ridge regression model; NMOS\_ON data, trained model
+and netlist; gate model library; circuit validation script and results table \\
+\midrule
+Dhanika &
+Data checking script; random forest model; NMOS\_OFF data, trained model and netlist; gate
+validation script; corner sampling and circuit simulation data; circuit results summary \\
+\midrule
+Jayash &
+Model training script; XGBoost model; PMOS\_ON data, trained model and netlist; gate simulation
+data and results table; circuit netlist and parity plot \\
+\midrule
+Tushar &
+Shared physics and modelling code; MLP model; PMOS\_OFF data and trained model; model index file;
+gate example netlists; gate results and parity plot; circuit model library file \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ==================================================================
+\section{Project repository}
+% ==================================================================
+
+All code, datasets, netlists, trained models, results and this report are available at:
+
+\begin{center}
+\url{https://github.com/heyitscass/ML-Driven-PVT-Variation-Aware-Leakage-Estimation}
+\end{center}
 
 \end{document}
