@@ -1,10 +1,10 @@
 PART C: TEST-CIRCUIT VALIDATION, 3-BIT CARRY-LOOKAHEAD ADDER (ML vs SPICE)
-32nm_LP, 42 gates / 204 transistors, 128 input vectors x 200 corners = 25491 operating points (1 SPICE failures dropped)
+32nm_LP, 42 gates / 204 transistors, 128 input vectors x 200 corners = 25600 operating points, all used
 ML leakage = sum of the 42 Part B gate models (which call the Part A transistor models).
 
 Input vector              SPICE med A     ML med A   Bias %  Med err %  p95 err % Mean err %
 --------------------------------------------------------------------------------------------
-ALL                        4.5174e-09   4.5320e-09     0.60       0.73       1.79       0.80
+ALL                        4.5390e-09   4.5550e-09     0.59       0.74       1.79       0.80
 
 Overall mean accuracy = 99.20 %
 Gate level (Part B, all 18 cases): median 0.69 %, p95 2.07 %, mean 0.83 %
@@ -12,19 +12,19 @@ Composition alone (sum of standalone-gate SPICE leakages vs circuit SPICE): bias
 
 Five most accurate input vectors:
 Input vector              SPICE med A     ML med A   Bias %  Med err %  p95 err % Mean err %
-A=001 B=100 Cin=1          4.6296e-09   4.6599e-09     0.59       0.69       1.75       0.79
-A=100 B=001 Cin=1          4.6295e-09   4.6599e-09     0.59       0.69       1.75       0.79
-A=000 B=101 Cin=1          4.7236e-09   4.7298e-09     0.59       0.69       1.74       0.79
-A=110 B=000 Cin=1          4.4823e-09   4.5187e-09     0.59       0.70       1.73       0.78
-A=111 B=100 Cin=0          4.4609e-09   4.4980e-09     0.60       0.70       1.75       0.79
+A=011 B=100 Cin=0          4.6031e-09   4.6175e-09     0.60       0.70       1.72       0.79
+A=110 B=001 Cin=0          4.6031e-09   4.6175e-09     0.60       0.70       1.72       0.79
+A=101 B=010 Cin=0          4.6031e-09   4.6175e-09     0.60       0.70       1.72       0.79
+A=111 B=000 Cin=0          4.5082e-09   4.5480e-09     0.59       0.70       1.73       0.79
+A=000 B=101 Cin=1          4.7359e-09   4.7466e-09     0.59       0.70       1.74       0.79
 
 Five least accurate input vectors:
 Input vector              SPICE med A     ML med A   Bias %  Med err %  p95 err % Mean err %
-A=101 B=011 Cin=0          4.4926e-09   4.5281e-09     0.62       0.77       1.82       0.81
-A=011 B=101 Cin=0          4.4926e-09   4.5281e-09     0.62       0.77       1.83       0.81
+A=001 B=111 Cin=0          4.5577e-09   4.5946e-09     0.61       0.77       1.83       0.82
+A=101 B=011 Cin=0          4.5030e-09   4.5321e-09     0.61       0.77       1.82       0.82
+A=011 B=101 Cin=0          4.5030e-09   4.5321e-09     0.61       0.77       1.82       0.82
+A=111 B=001 Cin=0          4.4196e-09   4.4553e-09     0.60       0.77       1.82       0.82
 A=010 B=101 Cin=1          4.9388e-09   4.9509e-09     0.59       0.77       1.88       0.83
-A=100 B=011 Cin=1          4.9388e-09   4.9509e-09     0.59       0.77       1.88       0.83
-A=001 B=110 Cin=1          4.9388e-09   4.9509e-09     0.59       0.77       1.88       0.83
 
 Ten largest single errors:
   A=111 B=000 Cin=1        corner  74  VDD 1.098 V  T  113.3 C  SPICE 9.540e-09 A  ML 9.141e-09 A  error 4.18 %

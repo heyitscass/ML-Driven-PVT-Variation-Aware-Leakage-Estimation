@@ -120,12 +120,22 @@ def device_line(name, typ, d, g, s, b, wmult) -> str:
     return f"{name} {d} {g} {s} {b} {typ} W={wmult * config.L_MIN:.4e} L={config.L_MIN:.3e}\n"
 
 
+# Last-resort retry for operating points that the default ngspice matrix solver
+# cannot converge (a few corners give NaN in every gmin/source-stepping attempt).
+# KLU is a different sparse solver: it changes how the equations are solved, not
+# the circuit or the required .options line, so a converged result is the same
+# operating point. Used only for retries, so first-attempt results are unchanged.
+RETRY_SOLVER_OPTION = ".options klu"
+
+
 def gate_netlist(gate, combo, c, with_control=False, guess_mode=0) -> str:
     """guess_mode picks the solver's starting guess: 0 = logic levels on driven nodes,
-    1 = none, 2 = logic levels plus stack nodes near their rail (used for retries)."""
+    1 = none, 2 = logic levels plus stack nodes near their rail, 3 = as 0 but with
+    the KLU solver (RETRY_SOLVER_OPTION). Modes 1-3 are used only for retries."""
     g = GATES[gate]
     txt = (f"* {config.TECH} {gate}, inputs {''.join(g['inputs']).upper()}={combo}, corner {int(c['corner'])}\n"
-           f"* VDD={c['vdd']:.6f} V, T={c['temp']:.4f} C\n" + corner_header(c) + "\n")
+           f"* VDD={c['vdd']:.6f} V, T={c['temp']:.4f} C\n" + corner_header(c)
+           + (RETRY_SOLVER_OPTION + "\n" if guess_mode == 3 else "") + "\n")
     for dev in g["devices"]:
         txt += device_line(*dev)
     txt += f"Vdd vdd 0 dc {c['vdd']:.9f}\n"

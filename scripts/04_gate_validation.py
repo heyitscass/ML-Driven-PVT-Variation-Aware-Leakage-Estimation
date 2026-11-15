@@ -55,7 +55,7 @@ def run_spice(corners, exe, workers) -> pd.DataFrame:
     su.write_param_model(WORK / gl.PARAM_LIB_NAME)
     todo = [(gate, combo, ci) for gate in gl.GATES for combo in gl.input_combos(gate) for ci in range(len(corners))]
     good, n_retry = {}, 0
-    for mode in (0, 1, 2):            # retry unusable solutions with another starting guess
+    for mode in (0, 1, 2, 3):         # retry unusable solutions with another starting guess, then KLU
         jobs = []
         for gate in gl.GATES:
             names = []

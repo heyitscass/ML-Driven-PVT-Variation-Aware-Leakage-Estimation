@@ -1,5 +1,5 @@
 PART B: GATE-LEVEL VALIDATION (ML vs SPICE)
-32nm_LP, VDD = 1.0 V +/- 10 %, 200 corners (seed 2025), 18 gate/input cases, 3599 simulations (1 failed)
+32nm_LP, VDD = 1.0 V +/- 10 %, 200 corners (seed 2025), 18 gate/input cases, 3600 simulations
 
 Leakage = current drawn from all sources at VDD (supply + high inputs) = static power / VDD.
 ML leakage: transistor terminal voltages from the SPICE node voltages -> Part A models -> gate leakage.
@@ -19,7 +19,7 @@ NOR2    00     7.2035e-11   7.1354e-11     0.40       0.73       2.29       0.90
 NOR2    01     9.5220e-11   9.5272e-11     0.16       0.70       2.25       0.90 |            0.70     2.25
 NOR2    10     4.3141e-11   4.3014e-11     0.55       0.69       1.78       0.80 |            0.71     1.98
 NOR2    11     4.4560e-11   4.4459e-11     0.45       0.65       1.64       0.75 |            0.69     1.75
-AND2    00     8.3417e-11   8.3905e-11     0.43       0.72       1.91       0.82 |            0.72     1.91
+AND2    00     8.3449e-11   8.3937e-11     0.42       0.72       1.91       0.82 |            0.72     1.91
 AND2    01     1.4053e-10   1.4029e-10     0.51       0.67       1.73       0.76 |            0.67     1.73
 AND2    10     7.1418e-11   7.1986e-11     0.36       0.64       1.93       0.76 |            0.63     1.93
 AND2    11     1.7182e-10   1.7327e-10     0.66       0.82       2.05       0.90 |            0.82     2.05
@@ -31,9 +31,9 @@ OR2     11     8.4780e-11   8.4640e-11     0.47       0.59       1.53       0.66
 INV    all     3.1052e-11   3.1317e-11     0.37       0.73       2.55       0.91 |            0.73     2.55
 NAND2  all     5.8602e-11   5.8809e-11     0.56       0.73       2.39       0.88 |            0.73     2.39
 NOR2   all     5.4952e-11   5.5458e-11     0.40       0.69       2.10       0.84 |            0.70     2.10
-AND2   all     1.0774e-10   1.0804e-10     0.48       0.68       1.95       0.81 |            0.70     1.97
+AND2   all     1.0786e-10   1.0804e-10     0.48       0.68       1.95       0.81 |            0.70     1.97
 OR2    all     9.2170e-11   9.2341e-11     0.43       0.63       1.78       0.74 |            0.65     1.78
-ALL    all     6.9644e-11   6.9872e-11     0.46       0.69       2.07       0.83 |            0.69     2.07
+ALL    all     6.9675e-11   6.9879e-11     0.46       0.69       2.07       0.83 |            0.70     2.07
 
 Overall mean accuracy = 99.17 %  (mean error 0.83 %, median 0.69 %)
 

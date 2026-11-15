@@ -129,13 +129,15 @@ def subckt(gate) -> str:
     return txt + f".ends {gate}\n"
 
 
-def cla_netlist(c, bits=None, with_control=False) -> str:
+def cla_netlist(c, bits=None, with_control=False, klu=False) -> str:
+    """klu=True adds gl.RETRY_SOLVER_OPTION (used only to retry points that failed)."""
     bits = bits or {k: 0 for k in INPUTS}
     used = sorted({g[1] for g in CLA})
     txt = (f"* {config.TECH} {NB}-bit carry-lookahead adder, corner {int(c['corner'])}\n"
            f"* VDD={c['vdd']:.6f} V, T={c['temp']:.4f} C; {len(CLA)} gates "
            f"({', '.join(f'{sum(g[1] == u for g in CLA)} {u}' for u in used)})\n"
-           + gl.corner_header(c) + "\n" + "\n".join(subckt(u) for u in used) + "\n")
+           + gl.corner_header(c) + (gl.RETRY_SOLVER_OPTION + "\n" if klu else "")
+           + "\n" + "\n".join(subckt(u) for u in used) + "\n")
     for name, typ, a, b, out in CLA:
         txt += f"{name} {a} {b} {out} vdd {typ}\n"
     txt += f"\nVdd vdd 0 dc {c['vdd']:.9f}\n"
@@ -171,6 +173,21 @@ def run_spice(corners, vecs, exe, workers) -> pd.DataFrame:
                 for k in range(0, len(names), BATCH)]
         for f in futs:
             res.update(f.result())
+    # Retry points that did not converge, each in its own ngspice process: first
+    # with the default solver (some points only fail inside a large batch), then
+    # with the KLU solver (gl.RETRY_SOLVER_OPTION).
+    failed = [n for n in names if n not in res]
+    for klu in (False, True):
+        todo = [n for n in failed if n not in res]
+        for n in todo:
+            ci, vi = int(n[1:4]), int(n[6:9])
+            (WORK / n).write_text(cla_netlist(corners.iloc[ci], vecs[vi][1], klu=klu))
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            futs = [ex.submit(su.run_batch, exe, WORK, [n], PRINT, f"drv_retry{int(klu)}_{n}") for n in todo]
+            for f in futs:
+                res.update(f.result())
+    print(f"SPICE: {len(failed)} operating points needed a retry, "
+          f"{sum(n not in res for n in failed)} still failed")
     rows = []
     for ci in range(len(corners)):
         c = corners.iloc[ci]
@@ -228,7 +245,14 @@ def main():
     ml, gate_spice = circuit_ml(corners, vecs)
     sim["ml_leak"] = ml.ravel()
     sim["gate_spice_sum"] = gate_spice.ravel()
+    # ML leakage is NaN where a gate this vector uses has no Part B result at that corner
+    n_ml_missing = int((sim["spice_leak"].notna() & sim["ml_leak"].isna()).sum())
+    if n_ml_missing:
+        print(f"WARNING: {n_ml_missing} operating points have no ML leakage because a Part B "
+              f"gate simulation is missing at their corner (rerun 04 and check its retries)")
+    n_total = len(sim)
     sim = sim.dropna(subset=["spice_leak", "ml_leak"]).reset_index(drop=True)
+    n_dropped = n_total - len(sim)
     sim["err_pct"] = 100 * (sim["ml_leak"] - sim["spice_leak"]).abs() / sim["spice_leak"]
     sim.drop(columns="logic_ok").to_csv(DATA / "cla3_simulations.csv", index=False, float_format="%.10e")
 
@@ -249,8 +273,9 @@ def main():
             f"{'p95 err %':>10s} {'Mean err %':>10s}")
     L = [f"PART C: TEST-CIRCUIT VALIDATION, {NB}-BIT CARRY-LOOKAHEAD ADDER (ML vs SPICE)",
          f"{config.TECH}, {len(CLA)} gates / {sum(len(gl.GATES[g[1]]['devices']) for g in CLA)} transistors, "
-         f"{len(vecs)} input vectors x {len(corners)} corners = {len(sim)} operating points"
-         + (f" ({n_fail} SPICE failures dropped)" if n_fail else ""),
+         f"{len(vecs)} input vectors x {len(corners)} corners = {n_total} operating points"
+         + (f", {len(sim)} used ({n_dropped} dropped: {n_fail} SPICE failures, "
+            f"{n_ml_missing} with a missing Part B gate result)" if n_dropped else ", all used"),
          "ML leakage = sum of the 42 Part B gate models (which call the Part A transistor models).",
          "", head, "-" * 92, fmt(table.iloc[0]), "",
          f"Overall mean accuracy = {100 - overall['mean_err_pct']:.2f} %",
